@@ -1,12 +1,30 @@
+import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+
+// Load environment variables from the server/.env file explicitly so that
+// running npm from the monorepo root still picks up the server env file.
+const envPath = path.resolve(__dirname, '..', '.env');
+const altEnvPath = path.resolve(process.cwd(), 'server', '.env');
+
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+  console.log(`Loaded environment from ${envPath}`);
+} else if (fs.existsSync(altEnvPath)) {
+  dotenv.config({ path: altEnvPath });
+  console.log(`Loaded environment from ${altEnvPath}`);
+} else {
+  // Fallback to default behaviour (looks for process.cwd()/.env)
+  dotenv.config();
+  console.log('Loaded environment using default dotenv.config()');
+}
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { connectDB } from './config/db';
 import authRoutes from './routes/authRoutes';
 import requestRoutes from './routes/requestRoutes';
 import aiRoutes from './routes/aiRoutes';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
