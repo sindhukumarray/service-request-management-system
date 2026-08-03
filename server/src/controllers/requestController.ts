@@ -36,7 +36,9 @@ export const createRequest = async (req: AuthRequest, res: Response) => {
 
 export const getRequests = async (req: AuthRequest, res: Response) => {
   try {
-    const requests = await ServiceRequest.find()
+    const filter = req.user?.role === 'ADMIN' ? {} : { createdBy: req.user?.id };
+
+    const requests = await ServiceRequest.find(filter)
       .populate('createdBy', 'name email')
       .populate('assignedTo', 'name email')
       .sort({ createdAt: -1 });
@@ -58,6 +60,10 @@ export const getRequestById = async (req: AuthRequest, res: Response) => {
 
     if (!request) {
       return res.status(404).json({ error: 'Request not found' });
+    }
+
+    if (req.user?.role !== 'ADMIN' && request.createdBy.toString() !== req.user?.id) {
+      return res.status(403).json({ error: 'Forbidden: Access to this request is denied' });
     }
 
     return res.status(200).json(request);
@@ -107,6 +113,10 @@ export const cancelRequest = async (req: AuthRequest, res: Response) => {
     const request = await ServiceRequest.findById(id);
     if (!request) {
       return res.status(404).json({ error: 'Request not found' });
+    }
+
+    if (req.user?.role !== 'ADMIN' && request.createdBy.toString() !== req.user?.id) {
+      return res.status(403).json({ error: 'Forbidden: You cannot cancel this request' });
     }
 
     request.status = 'CANCELLED';
