@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/api';
-import { AlertCircle, UserPlus, Mail, KeyRound, User as UserIcon } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { AlertCircle, Mail, KeyRound, User as UserIcon } from 'lucide-react';
 
 export const Register: React.FC = () => {
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -21,9 +23,15 @@ export const Register: React.FC = () => {
 
     try {
       const response = await api.post('/auth/register', { name, email, password });
-      setSuccess('Account registered successfully! You can now log in.');
+      const { accessToken, user } = response.data;
+
+      login(accessToken, user);
+      setSuccess('Account registered successfully! Redirecting...');
+
+      navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.details || err.response?.data?.error || 'Registration failed');
+    } finally {
       setLoading(false);
     }
   };

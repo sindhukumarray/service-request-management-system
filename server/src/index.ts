@@ -31,14 +31,20 @@ const PORT = process.env.PORT || 5000;
 
 connectDB();
 
+// Normalize CLIENT_ORIGIN (remove trailing slash if present) and default to exact host without slash
+const clientOriginRaw = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
+const clientOrigin = clientOriginRaw.replace(/\/+$/g, '');
+
 const corsOptions = {
-  origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000/',
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type'],
+  origin: clientOrigin,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 };
 
 app.use(cors(corsOptions));
+// Ensure preflight requests are handled
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
