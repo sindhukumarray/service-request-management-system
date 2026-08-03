@@ -48,7 +48,7 @@ export const login = async (req: Request, res: Response) => {
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
     const passwordHash = await bcrypt.hash(password, 10);
 
@@ -56,7 +56,7 @@ export const register = async (req: Request, res: Response) => {
       name,
       email,
       passwordHash,
-      role: role || 'USER',
+      role: 'USER',
     });
 
     await newUser.save();
