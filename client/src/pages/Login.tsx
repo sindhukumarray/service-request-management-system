@@ -20,9 +20,9 @@ export const Login: React.FC = () => {
 
     try {
       const response = await api.post('/auth/login', { email, password });
-      const { token, user } = response.data;
+      const { accessToken, user } = response.data;
       
-      login(token, user);
+      login(accessToken, user);
       
       if (user.role === 'ADMIN') {
         navigate('/admin');
@@ -54,7 +54,7 @@ export const Login: React.FC = () => {
         {error && (
           <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md flex items-start space-x-2">
             <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <span class="text-sm text-red-700">{error}</span>
+            <span className="text-sm text-red-700">{error}</span>
           </div>
         )}
 
@@ -122,8 +122,8 @@ export const Login: React.FC = () => {
 
         <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mt-6 text-xs text-slate-500 space-y-1">
           <p className="font-semibold text-slate-700">Default Seed Credentials:</p>
-          <p>User: <code class="bg-slate-200 px-1 py-0.5 rounded text-red-600 font-mono">user@example.com</code> / <code class="bg-slate-200 px-1 py-0.5 rounded text-red-600 font-mono">User@123</code></p>
-          <p>Admin: <code class="bg-slate-200 px-1 py-0.5 rounded text-red-600 font-mono">admin@example.com</code> / <code class="bg-slate-200 px-1 py-0.5 rounded text-red-600 font-mono">Admin@123</code></p>
+          <p>User: <code className="bg-slate-200 px-1 py-0.5 rounded text-red-600 font-mono">user@example.com</code> / <code className="bg-slate-200 px-1 py-0.5 rounded text-red-600 font-mono">User@123</code></p>
+          <p>Admin: <code className="bg-slate-200 px-1 py-0.5 rounded text-red-600 font-mono">admin@example.com</code> / <code className="bg-slate-200 px-1 py-0.5 rounded text-red-600 font-mono">Admin@123</code></p>
         </div>
       </div>
     </div>

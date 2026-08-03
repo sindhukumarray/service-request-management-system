@@ -22,7 +22,7 @@ export const createRequest = async (req: AuthRequest, res: Response) => {
         {
           status: 'OPEN',
           changedBy: new mongoose.Types.ObjectId(req.user?.id),
-          comment: 'Request created',
+          note: 'Request created',
         },
       ],
     });
@@ -113,7 +113,7 @@ export const cancelRequest = async (req: AuthRequest, res: Response) => {
     request.statusHistory.push({
       status: 'CANCELLED',
       changedBy: new mongoose.Types.ObjectId(req.user?.id),
-      comment: 'Cancelled by user',
+      note: 'Cancelled by user',
       changedAt: new Date(),
     });
 

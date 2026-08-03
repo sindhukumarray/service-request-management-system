@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
+import { AuthRequest } from '../middleware/auth';
 
 export const login = async (req: Request, res: Response) => {
   try {
@@ -49,10 +50,12 @@ export const register = async (req: Request, res: Response) => {
   try {
     const { name, email, password, role } = req.body;
 
+    const passwordHash = await bcrypt.hash(password, 10);
+
     const newUser = new User({
       name,
       email,
-      passwordHash: password,
+      passwordHash,
       role: role || 'USER',
     });
 
@@ -76,4 +79,18 @@ export const register = async (req: Request, res: Response) => {
   } catch (error) {
     return res.status(500).json({ error: 'Registration failed', details: (error as Error).message });
   }
+};
+
+export const getCurrentUser = async (req: AuthRequest, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  return res.status(200).json({
+    user: {
+      id: req.user.id,
+      email: req.user.email,
+      role: req.user.role,
+    },
+  });
 };

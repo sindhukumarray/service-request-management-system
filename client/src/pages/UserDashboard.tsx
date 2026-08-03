@@ -84,7 +84,7 @@ export const UserDashboard: React.FC = () => {
         <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg flex items-center justify-between mb-6">
           <div className="flex items-center space-x-2">
             <AlertCircle className="h-5 w-5 text-red-500" />
-            <span class="text-sm text-red-700">{error}</span>
+            <span className="text-sm text-red-700">{error}</span>
           </div>
           <button onClick={fetchRequests} className="text-red-700 hover:text-red-900">
             <RefreshCw className="h-4 w-4" />
