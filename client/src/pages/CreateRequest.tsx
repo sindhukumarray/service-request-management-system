@@ -31,25 +31,33 @@ export const CreateRequest: React.FC = () => {
     setLoadingAI(true);
 
     try {
-      const response = await api.post('/ai/analyze', { title, description });
+      // Backend exposes POST /api/ai/analyze-request
+      const response = await api.post('/ai/analyze-request', { title, description });
 
+      // aiController returns { summary, suggestedCategory, suggestedPriority, reason }
       const {
-        aiSummary: fetchedSummary,
-        aiSuggestedCategory: fetchedCategory,
-        aiSuggestedPriority: fetchedPriority,
-        aiReason: fetchedReason
+        summary,
+        suggestedCategory,
+        suggestedPriority,
+        reason,
       } = response.data;
+
+      const fetchedSummary = summary;
+      const fetchedCategory = suggestedCategory;
+      const fetchedPriority = suggestedPriority;
+      const fetchedReason = reason;
 
       setAiSummary(fetchedSummary || 'No summary returned');
       setAiSuggestedCategory(fetchedCategory || 'OTHER');
       setAiSuggestedPriority(fetchedPriority || 'MEDIUM');
       setAiReason(fetchedReason || 'No reasoning provided');
-      
+
       setCategory(fetchedCategory || 'OTHER');
       setPriority(fetchedPriority || 'MEDIUM');
-      setLoadingAI(false);
     } catch (err: any) {
       setError(`AI analysis failed: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setLoadingAI(false);
     }
   };
 
