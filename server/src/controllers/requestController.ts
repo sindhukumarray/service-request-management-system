@@ -5,17 +5,47 @@ import mongoose from 'mongoose';
 
 export const createRequest = async (req: AuthRequest, res: Response) => {
   try {
-    const { title, description, category, priority } = req.body;
+    const { title, description, category, priority, aiSummary, aiSuggestedCategory, aiSuggestedPriority } = req.body;
 
     if (!title || !description) {
       return res.status(400).json({ error: 'Title and description are required' });
     }
 
+    // Normalizers to ensure values conform to Mongoose enums
+    const normalizePriority = (val?: string) => {
+      if (!val) return 'MEDIUM';
+      const v = val.toString().trim().toUpperCase();
+      if (['URGENT', 'CRITICAL'].includes(v)) return 'URGENT';
+      if (v === 'HIGH') return 'HIGH';
+      if (v === 'MEDIUM') return 'MEDIUM';
+      if (v === 'LOW') return 'LOW';
+      // fallback
+      return 'MEDIUM';
+    };
+
+    const normalizeCategory = (val?: string) => {
+      if (!val) return 'OTHER';
+      const v = val.toString().trim().toUpperCase();
+      if (['SOFTWARE', 'HARDWARE', 'NETWORK', 'ACCESS', 'OTHER'].includes(v)) return v as any;
+      // tries some common mappings
+      if (v.includes('NET')) return 'NETWORK';
+      if (v.includes('SOFT')) return 'SOFTWARE';
+      if (v.includes('HARD')) return 'HARDWARE';
+      if (v.includes('ACCESS') || v.includes('AUTH') || v.includes('PERM')) return 'ACCESS';
+      return 'OTHER';
+    };
+
+    const normalizedCategory = normalizeCategory(category || aiSuggestedCategory);
+    const normalizedPriority = normalizePriority(priority || aiSuggestedPriority);
+
     const newRequest = new ServiceRequest({
       title,
       description,
-      category: category || 'Other',
-      priority: priority || 'MEDIUM',
+      aiSummary: aiSummary || undefined,
+      aiSuggestedCategory: normalizeCategory(aiSuggestedCategory),
+      aiSuggestedPriority: normalizePriority(aiSuggestedPriority),
+      category: normalizedCategory,
+      priority: normalizedPriority,
       status: 'OPEN',
       createdBy: req.user?.id,
       statusHistory: [
