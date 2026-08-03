@@ -61,11 +61,16 @@ export const CreateRequest: React.FC = () => {
     }
   };
 
+  const submittingRef = React.useRef(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading || submittingRef.current) return; // prevent duplicate
+
     setError(null);
     setSuccess(null);
     setLoading(true);
+    submittingRef.current = true;
 
     try {
       const response = await api.post('/requests', {
@@ -92,6 +97,7 @@ export const CreateRequest: React.FC = () => {
       setError(err.response?.data?.error || 'Failed to submit service request.');
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 

@@ -112,4 +112,10 @@ ServiceRequestSchema.pre('save', function (next) {
   next();
 });
 
+export const generateRequestNumber = (): string => {
+  const randomDigits = Math.floor(1000 + Math.random() * 9000);
+  const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+  return `SR-${dateStr}-${randomDigits}`;
+};
+
 export const ServiceRequest = model<IServiceRequest>('ServiceRequest', ServiceRequestSchema);

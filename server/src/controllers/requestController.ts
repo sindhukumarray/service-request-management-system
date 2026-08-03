@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { ServiceRequest } from '../models/ServiceRequest';
+import { ServiceRequest, generateRequestNumber } from '../models/ServiceRequest';
 import mongoose from 'mongoose';
 
 export const createRequest = async (req: AuthRequest, res: Response) => {
@@ -38,26 +38,78 @@ export const createRequest = async (req: AuthRequest, res: Response) => {
     const normalizedCategory = normalizeCategory(category || aiSuggestedCategory);
     const normalizedPriority = normalizePriority(priority || aiSuggestedPriority);
 
-    const newRequest = new ServiceRequest({
-      title,
-      description,
-      aiSummary: aiSummary || undefined,
-      aiSuggestedCategory: normalizeCategory(aiSuggestedCategory),
-      aiSuggestedPriority: normalizePriority(aiSuggestedPriority),
-      category: normalizedCategory,
-      priority: normalizedPriority,
-      status: 'OPEN',
-      createdBy: req.user?.id,
-      statusHistory: [
-        {
-          status: 'OPEN',
-          changedBy: new mongoose.Types.ObjectId(req.user?.id),
-          note: 'Request created',
-        },
-      ],
-    });
+    // Use an atomic upsert to prevent duplicate documents from rapid repeat submissions
+    const filter = { title, description, createdBy: req.user?.id };
+    const requestNumber = generateRequestNumber();
 
-    const savedRequest = await newRequest.save();
+    const update = {
+      $setOnInsert: {
+        requestNumber,
+        title,
+        description,
+        aiSummary: aiSummary || undefined,
+        aiSuggestedCategory: normalizeCategory(aiSuggestedCategory),
+        aiSuggestedPriority: normalizePriority(aiSuggestedPriority),
+        category: normalizedCategory,
+        priority: normalizedPriority,
+        status: 'OPEN',
+        createdBy: req.user?.id,
+        statusHistory: [
+          {
+            status: 'OPEN',
+            changedBy: new mongoose.Types.ObjectId(req.user?.id),
+            note: 'Request created',
+          },
+        ],
+      },
+    };
+
+    const options = { upsert: true, new: true, setDefaultsOnInsert: true, rawResult: true } as any;
+    const result = await ServiceRequest.findOneAndUpdate(filter, update, options);
+
+    // Determine savedRequest robustly across driver versions
+    let savedRequest = result.value as any;
+    let createdNow = false;
+
+    // Try to resolve savedRequest first
+    if (!savedRequest) {
+      const upsertedId = result.lastErrorObject?.upserted;
+      if (upsertedId) {
+        savedRequest = await ServiceRequest.findById(upsertedId);
+      } else {
+        savedRequest = await ServiceRequest.findOne(filter);
+      }
+    }
+
+    if (!savedRequest) {
+      return res.status(500).json({ error: 'Failed to create or retrieve request' });
+    }
+
+    // Determine if the document was newly created
+    if (result.lastErrorObject) {
+      if (result.lastErrorObject.upserted) {
+        createdNow = true;
+      } else if (typeof result.lastErrorObject.updatedExisting === 'boolean') {
+        createdNow = !result.lastErrorObject.updatedExisting;
+      }
+    }
+
+    // Fallback: if driver didn't set lastErrorObject flags, use createdAt proximity
+    if (!createdNow) {
+      const createdAt = savedRequest.createdAt ? new Date(savedRequest.createdAt) : null;
+      if (createdAt) {
+        const ageMs = Date.now() - createdAt.getTime();
+        if (ageMs < 5000) {
+          createdNow = true;
+        }
+      }
+    }
+
+    if (!createdNow) {
+      // Duplicate detected — return 409 with existing resource
+      return res.status(409).json({ error: 'Duplicate request detected', request: savedRequest });
+    }
+
     return res.status(201).json(savedRequest);
   } catch (error) {
     return res.status(500).json({ error: 'Failed to create request', details: (error as Error).message });
