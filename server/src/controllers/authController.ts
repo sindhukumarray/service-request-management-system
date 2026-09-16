@@ -4,12 +4,24 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 8;
+const isNonEmpty = (s: any) => typeof s === 'string' && s.trim().length > 0;
+
 export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    if (!isNonEmpty(email) || !isNonEmpty(password)) {
       return res.status(400).json({ error: 'Please provide email and password' });
+    }
+
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
     }
 
     const user = await User.findOne({ email });
@@ -50,11 +62,29 @@ export const register = async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body;
 
+    if (!isNonEmpty(name) || !isNonEmpty(email) || !isNonEmpty(password)) {
+      return res.status(400).json({ error: 'Name, email and password are required' });
+    }
+
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
+    }
+
+    // prevent duplicate registration
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(409).json({ error: 'Email already in use' });
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
 
     const newUser = new User({
-      name,
-      email,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
       passwordHash,
       role: 'USER',
     });

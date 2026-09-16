@@ -3,12 +3,25 @@ import { AuthRequest } from '../middleware/auth';
 import { ServiceRequest, generateRequestNumber } from '../models/ServiceRequest';
 import mongoose from 'mongoose';
 
+const isNonEmptyString = (v: any) => typeof v === 'string' && v.trim().length > 0;
+const validCategories = ['SOFTWARE', 'HARDWARE', 'NETWORK', 'ACCESS', 'OTHER'];
+const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+const validStatuses = ['OPEN', 'IN_REVIEW', 'IN_PROGRESS', 'RESOLVED', 'CANCELLED'];
+
 export const createRequest = async (req: AuthRequest, res: Response) => {
   try {
     const { title, description, category, priority, aiSummary, aiSuggestedCategory, aiSuggestedPriority } = req.body;
 
-    if (!title || !description) {
-      return res.status(400).json({ error: 'Title and description are required' });
+    if (!isNonEmptyString(title) || !isNonEmptyString(description)) {
+      return res.status(400).json({ error: 'Title and description are required and must not be empty' });
+    }
+
+    // If client provided category/priority, validate them strictly
+    if (category && !validCategories.includes(category.toString().trim().toUpperCase())) {
+      return res.status(400).json({ error: 'Invalid category' });
+    }
+    if (priority && !validPriorities.includes(priority.toString().trim().toUpperCase())) {
+      return res.status(400).json({ error: 'Invalid priority' });
     }
 
     // Normalizers to ensure values conform to Mongoose enums
@@ -39,14 +52,14 @@ export const createRequest = async (req: AuthRequest, res: Response) => {
     const normalizedPriority = normalizePriority(priority || aiSuggestedPriority);
 
     // Use an atomic upsert to prevent duplicate documents from rapid repeat submissions
-    const filter = { title, description, createdBy: req.user?.id };
+    const filter = { title: title.trim(), description: description.trim(), createdBy: req.user?.id };
     const requestNumber = generateRequestNumber();
 
     const update = {
       $setOnInsert: {
         requestNumber,
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim(),
         aiSummary: aiSummary || undefined,
         aiSuggestedCategory: normalizeCategory(aiSuggestedCategory),
         aiSuggestedPriority: normalizePriority(aiSuggestedPriority),
@@ -135,6 +148,10 @@ export const getRequestById = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: 'Invalid request id' });
+    }
+
     const request = await ServiceRequest.findById(id)
       .populate('createdBy', 'name email')
       .populate('assignedTo', 'name email')
@@ -159,12 +176,20 @@ export const updateRequestStatus = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { status } = req.body;
 
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: 'Invalid request id' });
+    }
+
+    if (!isNonEmptyString(status) || !validStatuses.includes(status.toString().trim().toUpperCase())) {
+      return res.status(400).json({ error: 'Invalid status value' });
+    }
+
     const request = await ServiceRequest.findById(id);
     if (!request) {
       return res.status(404).json({ error: 'Request not found' });
     }
 
-    request.status = status;
+    request.status = status.toString().trim().toUpperCase();
     await request.save();
     return res.status(200).json(request);
   } catch (error) {
@@ -175,6 +200,11 @@ export const updateRequestStatus = async (req: AuthRequest, res: Response) => {
 export const assignRequest = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: 'Invalid request id' });
+    }
+
     const request = await ServiceRequest.findById(id);
     if (!request) {
       return res.status(404).json({ error: 'Request not found' });
@@ -191,6 +221,10 @@ export const assignRequest = async (req: AuthRequest, res: Response) => {
 export const cancelRequest = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ error: 'Invalid request id' });
+    }
 
     const request = await ServiceRequest.findById(id);
     if (!request) {

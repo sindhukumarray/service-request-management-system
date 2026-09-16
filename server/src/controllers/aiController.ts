@@ -4,8 +4,8 @@ export const analyzeRequest = async (req: Request, res: Response) => {
   try {
     const { title, description } = req.body;
 
-    if (!title || !description) {
-      return res.status(400).json({ error: 'Title and description are required for AI analysis' });
+    if (!title || !description || typeof title !== 'string' || typeof description !== 'string' || title.trim().length === 0 || description.trim().length === 0) {
+      return res.status(400).json({ error: 'Title and description are required for AI analysis and must not be empty' });
     }
 
     const apiKey = process.env.AI_SERVICE_TOKEN; 
