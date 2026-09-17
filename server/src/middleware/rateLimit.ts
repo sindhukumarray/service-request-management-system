@@ -11,3 +11,14 @@ export const loginLimiter = rateLimit({
     return res.status(429).json({ error: 'Too many login attempts. Please try again later.' });
   },
 });
+
+// Dedicated rate limiter for registration attempts to mitigate account-creation abuse
+export const registrationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // limit each IP to 3 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req: Request, res: Response) => {
+    return res.status(429).json({ error: 'Too many registration attempts. Please try again later.' });
+  },
+});

@@ -107,7 +107,12 @@ export const register = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ error: 'Registration failed', details: (error as Error).message });
+    // Log the error server-side for diagnostics (do not expose internals to clients)
+    // Using console.error to follow the project's existing simple logging style
+    // (index.ts and test teardown log usage uses console.log/console.error elsewhere)
+    // eslint-disable-next-line no-console
+    console.error('Registration error:', error);
+    return res.status(500).json({ error: 'Registration failed' });
   }
 };
 
