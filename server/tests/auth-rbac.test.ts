@@ -1,9 +1,10 @@
-import { describe, it, beforeAll, afterAll, expect } from 'vitest';
+import { describe, it, beforeAll, afterAll, expect, vi } from 'vitest';
 import request from 'supertest';
 import { app } from '../testUtils/app';
 import { connectTestDB, disconnectTestDB, clearTestDB } from '../testUtils/db';
 import { User } from '../src/models/User';
 import { ServiceRequest } from '../src/models/ServiceRequest';
+import { isAdmin } from '../src/middleware/auth';
 import jwt from 'jsonwebtoken';
 
 let server: any;
@@ -135,6 +136,51 @@ describe('RBAC Authorization Tests', () => {
       .send({ status: 'OPEN' });
 
     expect(res.status).toBe(401);
+  });
+
+  it('Rejects missing bearer token even with x-guest-bypass header', async () => {
+    const req = await ServiceRequest.findOne({ requestNumber: 'SR-1' });
+    const res = await request(server)
+      .patch(`/api/requests/${req!._id.toString()}/status`)
+      .set('x-guest-bypass', 'true')
+      .send({ status: 'IN_PROGRESS' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/No token|authorization denied/i);
+  });
+
+  it('Normal USER cannot bypass admin check with x-admin-override header', () => {
+    const req = {
+      headers: { 'x-admin-override': 'true' },
+      user: { role: 'USER' },
+    } as any;
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn(),
+    } as any;
+    const next = vi.fn();
+
+    isAdmin(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('ADMIN can pass admin check normally even with x-admin-override header', () => {
+    const req = {
+      headers: { 'x-admin-override': 'true' },
+      user: { role: 'ADMIN' },
+    } as any;
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn(),
+    } as any;
+    const next = vi.fn();
+
+    isAdmin(req, res, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
   });
 });
 

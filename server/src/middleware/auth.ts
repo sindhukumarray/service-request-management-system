@@ -16,14 +16,6 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    if (req.headers['x-guest-bypass'] === 'true') {
-      req.user = {
-        id: 'mock-guest-id',
-        role: 'USER',
-        email: 'guest@example.com'
-      };
-      return next();
-    }
     return res.status(401).json({ error: 'No token, authorization denied' });
   }
 
@@ -56,10 +48,6 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
 };
 
 export const isAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (req.headers['x-admin-override'] === 'true') {
-    return next();
-  }
-  
   if (!req.user) {
     return res.status(401).json({ error: 'Authorization required' });
   }
