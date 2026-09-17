@@ -21,6 +21,7 @@ if (fs.existsSync(envPath)) {
 
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { connectDB } from './config/db';
 import authRoutes from './routes/authRoutes';
 import requestRoutes from './routes/requestRoutes';
@@ -31,17 +32,45 @@ const PORT = process.env.PORT || 5000;
 
 connectDB();
 
-// Normalize CLIENT_ORIGIN (remove trailing slash if present) and default to exact host without slash
-const clientOriginRaw = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
+// Normalize CLIENT_ORIGIN (remove trailing slash if present) and keep an explicit trusted origin only.
+const defaultDevOrigin = 'http://localhost:3000';
+const clientOriginRaw = process.env.CLIENT_ORIGIN?.trim() || (process.env.NODE_ENV === 'production' ? '' : defaultDevOrigin);
 const clientOrigin = clientOriginRaw.replace(/\/+$/g, '');
 
+const isValidOrigin = (value: string) => {
+  if (!value || value.trim() === '') return false;
+  if (value === '*') return false;
+
+  try {
+    const parsed = new URL(value);
+    const isHttpOrHttps = parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    return isHttpOrHttps && Boolean(parsed.hostname);
+  } catch {
+    return false;
+  }
+};
+
+if (process.env.NODE_ENV === 'production') {
+  if (!isValidOrigin(clientOrigin)) {
+    throw new Error('CLIENT_ORIGIN is required and must be a specific trusted origin in production. Wildcard origins are not allowed when credentials are enabled.');
+  }
+}
+
 const corsOptions = {
-  origin: clientOrigin,
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin || origin === clientOrigin) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error('Origin not allowed by CORS'));
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 };
 
+app.use(helmet());
 app.use(cors(corsOptions));
 // Ensure preflight requests are handled
 app.options('*', cors(corsOptions));
