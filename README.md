@@ -207,7 +207,16 @@ CLIENT_ORIGIN=http://localhost:3000
 AI_PROVIDER=mock
 AI_SERVICE_TOKEN=mock_secret
 DB_SEED_MODE=active
-```
+``` 
+
+Note on reverse-proxy (TRUST_PROXY)
+
+- TRUST_PROXY is optional in local development and tests. When the server runs behind a trusted reverse proxy in production (for example, NGINX, a cloud load balancer, or a CDN), set the environment variable TRUST_PROXY to a value appropriate for your topology so Express can populate req.ip correctly for IP-based protections (such as rate limiting).
+- Example: `TRUST_PROXY=1` (suitable when there is exactly one trusted proxy in front of the app).
+- Do NOT set `TRUST_PROXY` to `true`, `*`, or other overly-broad values in production; trusting untrusted proxies can allow spoofed `X-Forwarded-For` headers and weaken IP-based rate limiting and abuse defenses.
+
+For more details, see deployment notes and the server's configuration files.
+
 
 ### Frontend (`client/.env`)
 ```env

@@ -30,6 +30,20 @@ import aiRoutes from './routes/aiRoutes';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Configure Express trust proxy from environment when present.
+// This controls how Express populates req.ip (and therefore how IP-based rate
+// limiters like express-rate-limit identify clients). Set TRUST_PROXY only to
+// values that represent trusted proxy hops or trusted proxy IP/CIDR values
+// (for example: "1" for a single trusted reverse proxy). Do NOT set this to
+// a broad or boolean value like "true" or "*" in production — that can allow
+// spoofed X-Forwarded-For headers to override client IPs and weaken rate limits.
+const trustProxy = process.env.TRUST_PROXY;
+if (trustProxy && trustProxy.trim() !== '') {
+  app.set('trust proxy', trustProxy);
+  // eslint-disable-next-line no-console
+  console.log(`Express trust proxy set to: ${trustProxy}`);
+}
+
 connectDB();
 
 // Normalize CLIENT_ORIGIN (remove trailing slash if present) and keep an explicit trusted origin only.
