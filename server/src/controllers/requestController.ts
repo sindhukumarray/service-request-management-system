@@ -189,6 +189,10 @@ export const updateRequestStatus = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Request not found' });
     }
 
+    if (req.user?.role !== 'ADMIN' && request.createdBy.toString() !== req.user?.id) {
+      return res.status(403).json({ error: 'Forbidden: You cannot update this request status' });
+    }
+
     request.status = status.toString().trim().toUpperCase();
     await request.save();
     return res.status(200).json(request);
@@ -209,6 +213,11 @@ export const assignRequest = async (req: AuthRequest, res: Response) => {
     if (!request) {
       return res.status(404).json({ error: 'Request not found' });
     }
+
+    if (req.user?.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Forbidden: Admin access required to assign requests' });
+    }
+
     return res.status(200).json({
       message: 'Request assignment simulated successfully (Mock)',
       request,
